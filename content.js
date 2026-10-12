@@ -58,6 +58,7 @@
       overflow-y: auto;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
       line-height: 1.55;
+      box-sizing: border-box;
     }
     .bv-header {
       display: flex;
@@ -109,6 +110,7 @@
 
   let currentReference = "";
   let currentTranslation = "ESV";
+  let lastSelectionRect = null;
 
   function extractBibleRef(text) {
     if (!text || text.length > 80) return null;
@@ -118,11 +120,43 @@
     return match ? match[0].trim() : null;
   }
 
-  function showTrigger(x, y, refText) {
+  function positionPopup() {
+    if (!lastSelectionRect || container.style.display === "none") return;
+
+    const popupRect = container.getBoundingClientRect();
+    const margin = 12;
+    const gap = 8;
+
+    // Keep popup inside left and right screen edges
+    const left = Math.min(
+      Math.max(margin, lastSelectionRect.left),
+      window.innerWidth - popupRect.width - margin
+    );
+
+    // Place below if there is room; otherwise flip above the highlighted text
+    const spaceBelow = window.innerHeight - lastSelectionRect.bottom;
+    const spaceAbove = lastSelectionRect.top;
+
+    let top;
+    if (spaceBelow >= popupRect.height + gap + margin) {
+      top = lastSelectionRect.bottom + gap;
+    } else if (spaceAbove >= popupRect.height + gap + margin) {
+      top = lastSelectionRect.top - popupRect.height - gap;
+    } else {
+      top = Math.max(margin, window.innerHeight - popupRect.height - margin);
+    }
+
+    container.style.left = `${left}px`;
+    container.style.top = `${top}px`;
+  }
+
+  function showTrigger(rect, refText) {
     currentReference = refText;
-    container.style.display = "block";
-    container.style.left = `${Math.min(Math.max(10, x), window.innerWidth - 200)}px`;
-    container.style.top = `${Math.min(window.innerHeight - 60, y + 10)}px`;
+    lastSelectionRect = {
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left
+    };
 
     const triggerBtn = document.createElement("div");
     triggerBtn.className = "bv-trigger";
@@ -137,6 +171,8 @@
     });
 
     container.replaceChildren(triggerBtn);
+    container.style.display = "block";
+    positionPopup();
   }
 
   function renderMessageCard(text, isError = false) {
@@ -151,72 +187,85 @@
 
     card.appendChild(msg);
     container.replaceChildren(card);
+    positionPopup();
   }
 
   function loadVerse(reference, translation) {
-    const currentLeft = parseInt(container.style.left, 10) || 20;
-    container.style.left = `${Math.min(currentLeft, window.innerWidth - 390)}px`;
+    if (!chrome.runtime?.id) {
+      renderMessageCard("Extension was just updated — please refresh this page (F5).", true);
+      return;
+    }
+
     renderMessageCard(`Loading ${reference} (${translation})...`);
 
-    chrome.runtime.sendMessage(
-      { action: "fetchVerse", reference, translation },
-      (response) => {
-        if (!response || !response.success) {
-          renderMessageCard(response?.error || "Could not load verse.", true);
-          return;
-        }
+    try {
+      chrome.runtime.sendMessage(
+        { action: "fetchVerse", reference, translation },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            renderMessageCard("Please refresh this page (F5) to finish loading the extension.", true);
+            return;
+          }
+          if (!response || !response.success) {
+            renderMessageCard(response?.error || "Could not load verse.", true);
+            return;
+          }
 
-        const { data } = response;
-        const card = document.createElement("div");
-        card.className = "bv-card";
-        card.addEventListener("mousedown", (e) => e.stopPropagation());
-        card.addEventListener("mouseup", (e) => e.stopPropagation());
+          const { data } = response;
+          const card = document.createElement("div");
+          card.className = "bv-card";
+          card.addEventListener("mousedown", (e) => e.stopPropagation());
+          card.addEventListener("mouseup", (e) => e.stopPropagation());
 
-        const header = document.createElement("div");
-        header.className = "bv-header";
+          const header = document.createElement("div");
+          header.className = "bv-header";
 
-        const refSpan = document.createElement("span");
-        refSpan.className = "bv-ref";
-        refSpan.textContent = data.reference;
+          const refSpan = document.createElement("span");
+          refSpan.className = "bv-ref";
+          refSpan.textContent = data.reference;
 
-        const select = document.createElement("select");
-        select.className = "bv-select";
-        TRANSLATIONS.forEach((tr) => {
-          const opt = document.createElement("option");
-          opt.value = tr.code;
-          opt.textContent = tr.label;
-          if (tr.code === translation) opt.selected = true;
-          select.appendChild(opt);
-        });
-
-        select.addEventListener("change", (e) => {
-          currentTranslation = e.target.value;
-          loadVerse(currentReference, currentTranslation);
-        });
-
-        header.appendChild(refSpan);
-        header.appendChild(select);
-
-        const body = document.createElement("div");
-        body.className = "bv-text";
-
-        if (Array.isArray(data.verses)) {
-          data.verses.forEach((v, idx) => {
-            const num = document.createElement("span");
-            num.className = "bv-verse-num";
-            num.textContent = v.verse;
-            body.appendChild(num);
-            body.appendChild(
-              document.createTextNode(v.text.trim() + (idx < data.verses.length - 1 ? " " : ""))
-            );
+          const select = document.createElement("select");
+          select.className = "bv-select";
+          TRANSLATIONS.forEach((tr) => {
+            const opt = document.createElement("option");
+            opt.value = tr.code;
+            opt.textContent = tr.label;
+            if (tr.code === translation) opt.selected = true;
+            select.appendChild(opt);
           });
-        }
 
-        card.appendChild(header);
-        card.appendChild(body);
-        container.replaceChildren(card);
-      }
-    );
+          select.addEventListener("change", (e) => {
+            currentTranslation = e.target.value;
+            loadVerse(currentReference, currentTranslation);
+          });
+
+          header.appendChild(refSpan);
+          header.appendChild(select);
+
+          const body = document.createElement("div");
+          body.className = "bv-text";
+
+          if (Array.isArray(data.verses)) {
+            data.verses.forEach((v, idx) => {
+              const num = document.createElement("span");
+              num.className = "bv-verse-num";
+              num.textContent = v.verse;
+              body.appendChild(num);
+              body.appendChild(
+                document.createTextNode(v.text.trim() + (idx < data.verses.length - 1 ? " " : ""))
+              );
+            });
+          }
+
+          card.appendChild(header);
+          card.appendChild(body);
+          container.replaceChildren(card);
+          positionPopup();
+        }
+      );
+    } catch (err) {
+      renderMessageCard("Extension was just reloaded — please refresh this page (F5).", true);
+    }
   }
 
   document.addEventListener(
@@ -231,7 +280,7 @@
 
         if (ref && selection.rangeCount > 0) {
           const rect = selection.getRangeAt(0).getBoundingClientRect();
-          showTrigger(rect.left, rect.bottom, ref);
+          showTrigger(rect, ref);
         } else {
           container.style.display = "none";
         }
