@@ -1,4 +1,4 @@
-# 📖 Quick Bible Verse Lookup
+# Quick Bible Verse Lookup
 
 A lightweight Chromium browser extension (Chrome, Edge, Brave) that lets you highlight any Bible reference on a webpage to view the passage in a clean floating popup—including inside dynamic AI interfaces like **Google Gemini**.
 
@@ -13,7 +13,6 @@ A lightweight Chromium browser extension (Chrome, Edge, Brave) that lets you hig
 
 ## How to Install
 
-### Option 1: Download from Releases (Easiest)
 1. Go to the **Releases** section on the right side of this GitHub page and download the latest `QuickBibleVerseLookup.zip` file.
 2. Right-click the downloaded `.zip` file and select **Extract All...** to unzip it into a folder on your computer.
 3. Open your browser and navigate to the Extensions page:
@@ -24,12 +23,8 @@ A lightweight Chromium browser extension (Chrome, Edge, Brave) that lets you hig
 5. Click the **Load unpacked** button and select the unzipped folder containing `manifest.json`.
 6. Refresh any open tabs to start using the extension!
 
-### Option 2: Clone with Git
-1. Run `git clone https://github.com/YOUR-USERNAME/quick-bible-verse-lookup.git`
-2. Open `edge://extensions` or `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the cloned folder.
-
 ---
 
-## 💡 How to Use
+## How to Use
 
 1. **Highlight** any Bible verse reference on a webpage (for example, `John 3:14–16` or `Romans
