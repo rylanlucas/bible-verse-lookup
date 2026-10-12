@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Quick Bible Verse Lookup",
-  "version": "1.1",
-  "description": "Highlight any Bible reference to view the verse in popular English translations, including inside Gemini AI.",
-  "icons": {
-    "128": "icon128.png"
-  },
+  "version": "1.2",
+  "description": "Highlight any Bible reference to view the verse in English, Hebrew, or Greek, including inside Gemini AI.",
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://bolls.life/*"
   ],
