@@ -27,4 +27,4 @@ A lightweight Chromium browser extension (Chrome, Edge, Brave) that lets you hig
 
 ## How to Use
 
-1. **Highlight** any Bible verse reference on a webpage (for example, `John 3:14–16` or `Romans
+1. **Highlight** any Bible verse reference on a webpage (for example, `John 3:14–16`).
